@@ -6,7 +6,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
 import logging
 from sklearn.cluster import DBSCAN
-
+import faiss
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class SemanticDuplicate:
             min_cluster_size: int = 1,
             batch_size: int = 512,
             device: Optional[str] = None,
+            data_size_magnitude="small"
     ):
         if not 0 < similarity_threshold <= 1:
             raise ValueError("similarity_threshold must be in (0, 1]")
@@ -31,6 +32,7 @@ class SemanticDuplicate:
         self.batch_size = batch_size
         self.device = device
         self._model = None
+        self.data_size_magnitude = data_size_magnitude
 
     def fit_transform(
             self,
@@ -54,7 +56,10 @@ class SemanticDuplicate:
         embeddings = self._encode(unique_strings)
 
         # 3. Cluster embeddings with DBSCAN (cosine distance)
-        labels = self._cluster(embeddings)
+        if self.data_size_magnitude == "large":
+            labels = self._cluster_large(embeddings)
+        else:
+            labels = self._cluster(embeddings)
 
         # 4. Build a mapping string → cluster_label and broadcast-join
         result_df = self._attach_labels(
@@ -120,6 +125,40 @@ class SemanticDuplicate:
         n_noise = int(np.sum(labels == -1))
         logger.info("Found %d clusters and %d noise points", n_clusters, n_noise)
         return labels
+
+    def _cluster_large(self, embeddings: np.ndarray) -> np.ndarray:
+        n, dim = embeddings.shape
+
+        # Build FAISS index for fast cosine similarity search
+        index = faiss.IndexFlatIP(dim)  # Inner product = cosine (normalized)
+        index.add(embeddings.astype(np.float32))
+
+        # Find neighbors within similarity threshold
+        # Search for k nearest — adjust k based on expected cluster sizes
+        k = min(50, n)
+        similarities, indices = index.search(
+            embeddings.astype(np.float32), k
+        )
+
+        # Build sparse distance graph for DBSCAN
+        from scipy.sparse import lil_matrix
+        dist_matrix = lil_matrix((n, n), dtype=np.float32)
+
+        for i in range(n):
+            for j_idx in range(k):
+                j = indices[i][j_idx]
+                dist = 1.0 - similarities[i][j_idx]
+                dist_matrix[i, j] = max(dist, 0)
+                dist_matrix[j, i] = max(dist, 0)
+
+        eps = 1.0 - self.similarity_threshold
+        clustering = DBSCAN(
+            eps=eps,
+            min_samples=self.min_cluster_size,
+            metric="precomputed",
+            n_jobs=-1,
+        )
+        return clustering.fit_predict(dist_matrix.tocsr())
 
     @staticmethod
     def _attach_labels(
