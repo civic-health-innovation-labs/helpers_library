@@ -13,7 +13,7 @@ Benefits:
 > - Significant reduction in compute time
 
 Example of 
-<div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
 
 <div>
 
@@ -34,7 +34,7 @@ Example of
 
 </div>
 
-<div style="font-size: 2em;">→</div>
+<div style="font-size: 1em;">→</div>
 
 <div>
 
