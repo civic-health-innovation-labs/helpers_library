@@ -11,3 +11,46 @@ Solution: Compute clusters based on semantic similarity relying on cosine simila
 Benefits:
 > - Efficient large data analysis 
 > - Significant reduction in compute time
+
+Example of 
+<div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+
+<div>
+
+**Table 1: Original Data**
+
+| index |          Notes           |
+|:-----:|:------------------------:|
+|   0   | University of Liverpool  |
+|   1   |  Manchester University   |
+|   2   |   Liverpool University   |
+|   3   |  The Univ. of Liverpool  |
+|   4   |           UoM            |
+|   5   | The Univ. of Manchester  |
+|   6   | University of Manchester |
+|   7   |        Microsoft         |
+
+
+
+</div>
+
+<div style="font-size: 2em;">→</div>
+
+<div>
+
+**Table 2: Clustered Data**
+
+| index |          Notes           | Semantic Cluster |
+|:-----:|:------------------------:|:----------------:|
+|   0   | University of Liverpool  |        0         |
+|   1   |  Manchester University   |        1         |
+|   2   |   Liverpool University   |        0         |
+|   3   |  The Univ. of Liverpool  |        0         |
+|   4   | The Univ. of Manchester  |        1         |  
+|   5   |           UoM            |        1         |
+|   6   | University of Manchester |        1         |
+|   7   |        Microsoft         |        2         |
+
+</div>
+
+</div>
