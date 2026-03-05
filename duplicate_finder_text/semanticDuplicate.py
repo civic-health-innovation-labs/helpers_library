@@ -7,9 +7,13 @@ from pyspark.sql.types import IntegerType
 import logging
 from sklearn.cluster import DBSCAN
 import faiss
+import os
 
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+)
 
 class SemanticDuplicate:
     def __init__(
@@ -78,11 +82,19 @@ class SemanticDuplicate:
     @staticmethod
     def _extract_unique_strings(df: DataFrame, input_col: str) -> list[str]:
         """Collect distinct non-null strings from the target column."""
+        logger.info("Extracting unique data points")
         rows = df.select(input_col).where(F.col(input_col).isNotNull()).distinct().collect()
         return [row[0] for row in rows]
 
     def _get_model(self):
         """Lazy-load the sentence-transformers model."""
+        try:
+            from huggingface_hub import login
+            hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+            login(token=hf_token)
+            print()
+        except:
+            pass
         self._model = SentenceTransformer(
             self.model_name, device=self.device
         )
